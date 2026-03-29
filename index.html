@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>FPS Test</title>
+  <meta charset="UTF-8" />
+  <title>3D FPS Test</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       background: #000;
+      color: #fff;
       font-family: sans-serif;
     }
-
     #crosshair {
       position: absolute;
       top: 50%;
@@ -19,137 +19,214 @@
       height: 8px;
       margin-left: -4px;
       margin-top: -4px;
-      border: 2px solid white;
       border-radius: 50%;
+      border: 2px solid white;
       pointer-events: none;
       z-index: 10;
     }
-
     #info {
       position: absolute;
       bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      color: white;
+      font-size: 12px;
       opacity: 0.8;
       z-index: 10;
     }
   </style>
 </head>
 <body>
+  <div id="crosshair"></div>
+  <div id="info">Click to lock mouse. WASD to move. Left click to shoot.</div>
 
-<div id="crosshair"></div>
-<div id="info">Click to lock mouse. WASD to move.</div>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
+  <script>
+    // --- BASIC THREE SETUP ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x202028);
 
-<script>
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x202028);
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
 
-  const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-  );
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+    // --- LIGHTING ---
+    const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambient);
 
-  // Lighting
-  const light = new THREE.DirectionalLight(0xffffff, 1);
-  light.position.set(5, 10, 5);
-  scene.add(light);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(10, 20, 5);
+    scene.add(dirLight);
 
-  // Floor
-  const floorGeo = new THREE.PlaneGeometry(200, 200);
-  const floorMat = new THREE.MeshPhongMaterial({ color: 0x303030 });
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  scene.add(floor);
+    // --- FLOOR & WALLS ---
+    const floorGeo = new THREE.PlaneGeometry(200, 200);
+    const floorMat = new THREE.MeshPhongMaterial({ color: 0x303030 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
 
-  // Walls
-  const wallGeo = new THREE.BoxGeometry(200, 20, 2);
-  const wallMat = new THREE.MeshPhongMaterial({ color: 0x505050 });
+    const wallMat = new THREE.MeshPhongMaterial({ color: 0x505050 });
 
-  const wall1 = new THREE.Mesh(wallGeo, wallMat);
-  wall1.position.set(0, 10, -50);
-  scene.add(wall1);
-
-  const wall2 = wall1.clone();
-  wall2.position.set(0, 10, 50);
-  scene.add(wall2);
-
-  const wall3 = new THREE.Mesh(new THREE.BoxGeometry(2, 20, 200), wallMat);
-  wall3.position.set(-50, 10, 0);
-  scene.add(wall3);
-
-  const wall4 = wall3.clone();
-  wall4.position.set(50, 10, 0);
-  scene.add(wall4);
-
-  // Controls
-  const controls = new THREE.PointerLockControls(camera, document.body);
-  camera.position.set(0, 2, 5);
-
-  document.body.addEventListener("click", () => {
-    controls.lock();
-  });
-
-  const move = { forward: false, backward: false, left: false, right: false };
-  const velocity = new THREE.Vector3();
-  const direction = new THREE.Vector3();
-
-  document.addEventListener("keydown", (e) => {
-    if (e.code === "KeyW") move.forward = true;
-    if (e.code === "KeyS") move.backward = true;
-    if (e.code === "KeyA") move.left = true;
-    if (e.code === "KeyD") move.right = true;
-  });
-
-  document.addEventListener("keyup", (e) => {
-    if (e.code === "KeyW") move.forward = false;
-    if (e.code === "KeyS") move.backward = false;
-    if (e.code === "KeyA") move.left = false;
-    if (e.code === "KeyD") move.right = false;
-  });
-
-  let last = performance.now();
-
-  function animate() {
-    requestAnimationFrame(animate);
-
-    const now = performance.now();
-    const delta = (now - last) / 1000;
-    last = now;
-
-    if (controls.isLocked) {
-      velocity.x -= velocity.x * 10 * delta;
-      velocity.z -= velocity.z * 10 * delta;
-
-      direction.z = Number(move.forward) - Number(move.backward);
-      direction.x = Number(move.right) - Number(move.left);
-      direction.normalize();
-
-      const speed = 20;
-
-      if (move.forward || move.backward)
-        velocity.z -= direction.z * speed * delta;
-      if (move.left || move.right)
-        velocity.x -= direction.x * speed * delta;
-
-      controls.moveRight(-velocity.x * delta);
-      controls.moveForward(-velocity.z * delta);
+    function makeWall(w, h, d, x, y, z) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mesh = new THREE.Mesh(geo, wallMat);
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+      return mesh;
     }
 
-    renderer.render(scene, camera);
-  }
+    makeWall(200, 20, 2, 0, 10, -50);
+    makeWall(200, 20, 2, 0, 10, 50);
+    makeWall(2, 20, 200, -50, 10, 0);
+    makeWall(2, 20, 200, 50, 10, 0);
 
-  animate();
-</script>
+    // --- ENEMIES (RED BOXES) ---
+    const enemies = [];
+    const enemyGeo = new THREE.BoxGeometry(3, 3, 3);
+    const enemyMat = new THREE.MeshPhongMaterial({ color: 0xff4444 });
 
-</body>
-</html>
+    function spawnEnemy(x, z) {
+      const mesh = new THREE.Mesh(enemyGeo, enemyMat.clone());
+      mesh.position.set(x, 1.5, z);
+      scene.add(mesh);
+      enemies.push({ mesh, hp: 3 });
+    }
+
+    for (let i = 0; i < 10; i++) {
+      const x = (Math.random() - 0.5) * 80;
+      const z = (Math.random() - 0.5) * 80;
+      spawnEnemy(x, z);
+    }
+
+    // --- CONTROLS ---
+    const controls = new THREE.PointerLockControls(camera, document.body);
+    camera.position.set(0, 2, 10);
+
+    document.body.addEventListener("click", () => {
+      controls.lock();
+    });
+
+    const move = { forward: false, backward: false, left: false, right: false };
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "KeyW") move.forward = true;
+      if (e.code === "KeyS") move.backward = true;
+      if (e.code === "KeyA") move.left = true;
+      if (e.code === "KeyD") move.right = true;
+    });
+
+    document.addEventListener("keyup", (e) => {
+      if (e.code === "KeyW") move.forward = false;
+      if (e.code === "KeyS") move.backward = false;
+      if (e.code === "KeyA") move.left = false;
+      if (e.code === "KeyD") move.right = false;
+    });
+
+    // --- SIMPLE GUN (BOX) ATTACHED TO CAMERA ---
+    const gunGeo = new THREE.BoxGeometry(0.6, 0.3, 1.5);
+    const gunMat = new THREE.MeshPhongMaterial({ color: 0x222222 });
+    const gun = new THREE.Mesh(gunGeo, gunMat);
+    gun.position.set(0.5, -0.4, -1.0); // right-hand FPS position
+    camera.add(gun);
+    scene.add(camera);
+
+    // --- MUZZLE FLASH ---
+    const flashGeo = new THREE.SphereGeometry(0.08, 8, 8);
+    const flashMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+    const muzzleFlash = new THREE.Mesh(flashGeo, flashMat);
+    muzzleFlash.visible = false;
+    muzzleFlash.position.set(0.8, -0.35, -1.6);
+    camera.add(muzzleFlash);
+
+    function showFlash() {
+      muzzleFlash.visible = true;
+      setTimeout(() => (muzzleFlash.visible = false), 40);
+    }
+
+    // --- RECOIL ---
+    function applyRecoil() {
+      gun.position.z += 0.08;
+      setTimeout(() => {
+        gun.position.z -= 0.08;
+      }, 60);
+    }
+
+    // --- SHOOTING / RAYCAST ---
+    const raycaster = new THREE.Raycaster();
+    let lastShot = 0;
+    const fireRate = 150; // ms
+
+    function shoot() {
+      const now = performance.now();
+      if (now - lastShot < fireRate) return;
+      lastShot = now;
+
+      applyRecoil();
+      showFlash();
+
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      raycaster.set(camera.position.clone(), dir);
+
+      const enemyMeshes = enemies.map((e) => e.mesh);
+      const hits = raycaster.intersectObjects(enemyMeshes, false);
+
+      if (hits.length > 0) {
+        const hitMesh = hits[0].object;
+        const enemy = enemies.find((e) => e.mesh === hitMesh);
+        if (enemy) {
+          enemy.hp -= 1;
+          hitMesh.material.color.setHex(0xffaaaa);
+          setTimeout(() => hitMesh.material.color.setHex(0xff4444), 80);
+
+          if (enemy.hp <= 0) {
+            scene.remove(enemy.mesh);
+            enemies.splice(enemies.indexOf(enemy), 1);
+          }
+        }
+      }
+    }
+
+    window.addEventListener("mousedown", (e) => {
+      if (!controls.isLocked) return;
+      if (e.button === 0) shoot();
+    });
+
+    // --- RESIZE ---
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // --- MAIN LOOP ---
+    let last = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const delta = (now - last) / 1000;
+      last = now;
+
+      if (controls.isLocked) {
+        velocity.x -= velocity.x * 10 * delta;
+        velocity.z -= velocity.z * 10 * delta;
+
+        direction.z = Number(move.forward) - Number(move.backward);
+        direction.x = Number(move.right) - Number(move.left);
+        direction.normalize();
+
+        const speed = 20;
+
+        if (move.forward || move.backward
