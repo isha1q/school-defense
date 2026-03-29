@@ -61,15 +61,8 @@ const cube = new THREE.Mesh(
 );
 scene.add(cube);
 
-const light = new THREE.DDirectionalLight(0xffffff, 1);
+const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(5, 5, 5);
 scene.add(light);
 
-// ----------------------
-// ANIMATION LOOP
-// ----------------------
-function animate() {
-  requestAnimationFrame(animate);
-
-  const speed = 10;
-  const friction
+// ----------------
