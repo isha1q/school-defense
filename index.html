@@ -66,12 +66,13 @@ const controls = new PointerLockControls(camera, document.body);
 const overlay = document.getElementById("startOverlay");
 
 // Click overlay to start
-overlay.addEventListener("click", () => {
-  controls.lock();
+overlay.addEventListener("click", (event) => {
+  event.preventDefault();         // Prevent text selection / default behavior
+  overlay.style.display = "none"; // Hide overlay immediately
+  controls.lock();                // Lock pointer
 });
 
-// Hide overlay when pointer lock is active
-controls.addEventListener("lock", () => overlay.style.display = "none");
+// Show overlay again if pointer lock is released
 controls.addEventListener("unlock", () => overlay.style.display = "flex");
 
 // ----------------------
@@ -170,4 +171,4 @@ window.addEventListener("resize", () => {
 </script>
 
 </body>
-</html>
+</html>s
