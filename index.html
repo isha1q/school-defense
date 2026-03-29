@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>FPS NEW BUILD</title>
+<title>School Defense FPS</title>
 <style>
   body {
     margin: 0;
@@ -42,9 +42,21 @@
     opacity: 0.7;
     font-size: 14px;
   }
+
+  #error-log {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: red;
+    font-family: monospace;
+    white-space: pre;
+    z-index: 30;
+  }
 </style>
 </head>
 <body>
+
+<div id="error-log"></div>
 
 <div id="ui">
   Credits: <span id="credits">0</span><br>
@@ -54,10 +66,18 @@
 <div id="crosshair"></div>
 <div id="info">Click to lock mouse. WASD to move. Left click to shoot.</div>
 
+<!-- Three.js Library -->
 <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 <script src="https://unpkg.com/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 
 <script>
+// --- Error handling on-page ---
+window.onerror = function(message, source, lineno, colno, error) {
+  const log = document.getElementById('error-log');
+  log.textContent += `Error: ${message} at ${source}:${lineno}:${colno}\n`;
+};
+
+// --- Game variables ---
 let credits = 0;
 let health = 100;
 
@@ -71,13 +91,14 @@ function updateUI() {
 
 updateUI();
 
+// --- Three.js setup ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
 
-const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const ambient = new THREE.AmbientLight(0xffffff, 0.3);
@@ -87,6 +108,7 @@ const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(10, 20, 10);
 scene.add(light);
 
+// --- Floor and walls ---
 const floorGeo = new THREE.PlaneGeometry(200, 200);
 const floorMat = new THREE.MeshPhongMaterial({ color: 0x303030 });
 const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -94,7 +116,6 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const wallMat = new THREE.MeshPhongMaterial({ color: 0x505050 });
-
 function wall(w, h, d, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
   m.position.set(x, y, z);
@@ -106,6 +127,7 @@ wall(200, 20, 2, 0, 10, 50);
 wall(2, 20, 200, -50, 10, 0);
 wall(2, 20, 200, 50, 10, 0);
 
+// --- Enemies ---
 const enemies = [];
 const enemyGeo = new THREE.BoxGeometry(3, 3, 3);
 const enemyMat = new THREE.MeshPhongMaterial({ color: 0xff4444 });
@@ -121,6 +143,7 @@ for (let i = 0; i < 10; i++) {
   spawnEnemy((Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80);
 }
 
+// --- Controls ---
 const controls = new THREE.PointerLockControls(camera, document.body);
 camera.position.set(0, 2, 10);
 
@@ -144,6 +167,7 @@ document.addEventListener("keyup", e => {
   if (e.code === "KeyD") move.r = false;
 });
 
+// --- Gun & shooting ---
 const gun = new THREE.Mesh(
   new THREE.BoxGeometry(0.6, 0.3, 1.5),
   new THREE.MeshPhongMaterial({ color: 0x222222 })
@@ -206,12 +230,14 @@ window.addEventListener("mousedown", e => {
   if (controls.isLocked && e.button === 0) shoot();
 });
 
+// --- Resize handler ---
 window.addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
+  camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// --- Animation loop ---
 let last = performance.now();
 
 function animate() {
