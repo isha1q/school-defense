@@ -1,123 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>School Defense</title>
+  <meta charset="UTF-8" />
+  <title>3D FPS Test</title>
   <style>
     body {
       margin: 0;
-      background: #222;
+      overflow: hidden;
+      background: #000;
       color: #fff;
       font-family: sans-serif;
-      overflow: hidden;
     }
-
     #ui {
       position: absolute;
       top: 10px;
       left: 10px;
-      z-index: 5;
+      z-index: 10;
       font-size: 14px;
-      line-height: 18px;
     }
-
-    #shop {
+    #crosshair {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.7);
-      padding: 10px;
-      border-radius: 8px;
-      z-index: 5;
-      font-size: 14px;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-left: -5px;
+      margin-top: -5px;
+      border-radius: 50%;
+      border: 2px solid white;
+      z-index: 9;
+      pointer-events: none;
     }
-
-    button {
-      width: 180px;
-      margin-top: 5px;
-      padding: 5px;
-      background: #444;
-      color: #fff;
-      border: 1px solid #777;
-      border-radius: 4px;
-      cursor: pointer;
+    #info {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      opacity: 0.8;
     }
-
-    button:disabled {
-      background: #222;
-      color: #777;
-      border-color: #555;
-      cursor: default;
-    }
-
     canvas {
       display: block;
-      margin: 0 auto;
-      background: #000;
     }
   </style>
 </head>
 <body>
-
   <div id="ui">
     <div>Credits: <span id="credits">0</span></div>
-    <div>Gun: <span id="gunName">Pencil Shooter</span></div>
+    <div>Gun: <span id="gunName">Pencil Blaster 3D</span></div>
     <div>Damage: <span id="damage">1</span></div>
-    <div>Fire Rate: <span id="firerate">400 ms</span></div>
+    <div>Fire Rate: <span id="firerate">300 ms</span></div>
     <div>Health: <span id="health">3</span></div>
   </div>
 
-  <div id="shop">
-    <strong>Shop</strong><br>
-    <button id="buyNerf">Nerf Blaster ($150)</button>
-    <button id="buyRubber">Rubber Band Launcher ($400)</button>
-    <button id="buyPaper">Paper Airplane Cannon ($900)</button>
-  </div>
+  <div id="crosshair"></div>
+  <div id="info">Click to lock mouse. WASD to move, mouse to look, left click to shoot.</div>
 
-  <canvas id="game" width="900" height="500"></canvas>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/PointerLockControls.js"></script>
 
   <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-
-    // UI elements
+    // --- UI state ---
+    let credits = 0;
+    let health = 3;
+    let gun = { name: "Pencil Blaster 3D", damage: 1, rate: 300 };
     const creditsEl = document.getElementById("credits");
     const gunNameEl = document.getElementById("gunName");
     const damageEl = document.getElementById("damage");
     const firerateEl = document.getElementById("firerate");
     const healthEl = document.getElementById("health");
-
-    const buyNerf = document.getElementById("buyNerf");
-    const buyRubber = document.getElementById("buyRubber");
-    const buyPaper = document.getElementById("buyPaper");
-
-    // Load graphics
-    const playerImg = new Image();
-    playerImg.src = "https://i.imgur.com/7V6xQ0C.png"; // blue student sprite
-
-    const studentImg = new Image();
-    studentImg.src = "https://i.imgur.com/8Yp7m0C.png"; // student enemy
-
-    const teacherImg = new Image();
-    teacherImg.src = "https://i.imgur.com/6lXz0Qn.png"; // teacher enemy
-
-    const bulletImg = new Image();
-    bulletImg.src = "https://i.imgur.com/5pQ2p7B.png"; // pencil bullet
-
-    // Game state
-    let credits = 0;
-    let health = 3;
-
-    let bullets = [];
-    let enemies = [];
-
-    let lastShot = 0;
-    let lastSpawn = 0;
-
-    let gun = {
-      name: "Pencil Shooter",
-      damage: 1,
-      rate: 400
-    };
 
     function updateUI() {
       creditsEl.textContent = credits;
@@ -126,125 +77,191 @@
       firerateEl.textContent = gun.rate + " ms";
       healthEl.textContent = health;
     }
+    updateUI();
 
-    const player = {
-      x: 80,
-      y: 300,
-      w: 60,
-      h: 120
+    // --- THREE.js setup ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101018);
+
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    scene.add(ambient);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 10, 2);
+    scene.add(dirLight);
+
+    // Floor
+    const floorGeo = new THREE.PlaneGeometry(200, 200);
+    const floorMat = new THREE.MeshPhongMaterial({ color: 0x303030 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    scene.add(floor);
+
+    // Simple walls / obstacles
+    const boxGeo = new THREE.BoxGeometry(4, 4, 4);
+    const enemyMat = new THREE.MeshPhongMaterial({ color: 0xff4444 });
+    const enemies = [];
+
+    for (let i = 0; i < 10; i++) {
+      const box = new THREE.Mesh(boxGeo, enemyMat.clone());
+      box.position.set(
+        (Math.random() - 0.5) * 80,
+        2,
+        (Math.random() - 0.5) * 80
+      );
+      scene.add(box);
+      enemies.push({ mesh: box, hp: 3, reward: 10 });
+    }
+
+    // Player controls
+    const controls = new THREE.PointerLockControls(camera, document.body);
+    camera.position.set(0, 2, 5);
+
+    document.body.addEventListener("click", () => {
+      controls.lock();
+    });
+
+    const velocity = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    const move = { forward: false, backward: false, left: false, right: false };
+
+    const onKeyDown = (e) => {
+      switch (e.code) {
+        case "KeyW": move.forward = true; break;
+        case "KeyS": move.backward = true; break;
+        case "KeyA": move.left = true; break;
+        case "KeyD": move.right = true; break;
+      }
     };
+    const onKeyUp = (e) => {
+      switch (e.code) {
+        case "KeyW": move.forward = false; break;
+        case "KeyS": move.backward = false; break;
+        case "KeyA": move.left = false; break;
+        case "KeyD": move.right = false; break;
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keyup", onKeyUp);
 
     // Shooting
-    canvas.addEventListener("mousedown", () => {
+    let lastShot = 0;
+    const bullets = [];
+
+    window.addEventListener("mousedown", (e) => {
+      if (!controls.isLocked) return;
+      if (e.button !== 0) return;
+
       const now = performance.now();
       if (now - lastShot < gun.rate) return;
       lastShot = now;
 
+      // Create a small bullet
+      const bulletGeo = new THREE.SphereGeometry(0.1, 8, 8);
+      const bulletMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+      const bullet = new THREE.Mesh(bulletGeo, bulletMat);
+
+      const origin = new THREE.Vector3();
+      origin.copy(camera.position);
+
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+
+      bullet.position.copy(origin);
+      scene.add(bullet);
+
       bullets.push({
-        x: player.x + player.w,
-        y: player.y + player.h / 2,
-        vx: 8,
-        damage: gun.damage
+        mesh: bullet,
+        dir: dir.clone(),
+        speed: 80,
+        life: 1000
       });
     });
 
-    // Shop
-    buyNerf.onclick = () => {
-      if (credits >= 150) {
-        credits -= 150;
-        gun = { name: "Nerf Blaster", damage: 2, rate: 280 };
-        updateUI();
-      }
-    };
+    // Resize
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
 
-    buyRubber.onclick = () => {
-      if (credits >= 400) {
-        credits -= 400;
-        gun = { name: "Rubber Band Launcher", damage: 3, rate: 200 };
-        updateUI();
-      }
-    };
+    // Raycaster for hit detection
+    const raycaster = new THREE.Raycaster();
 
-    buyPaper.onclick = () => {
-      if (credits >= 900) {
-        credits -= 900;
-        gun = { name: "Paper Airplane Cannon", damage: 5, rate: 130 };
-        updateUI();
-      }
-    };
+    let prevTime = performance.now();
 
-    // Spawn enemies
-    function spawnEnemy() {
-      const type = Math.random() < 0.6 ? "student" : "teacher";
+    function animate() {
+      requestAnimationFrame(animate);
 
-      if (type === "student") {
-        enemies.push({
-          x: 900,
-          y: 300,
-          w: 60,
-          h: 120,
-          hp: 3,
-          speed: 1,
-          reward: 10,
-          img: studentImg
-        });
-      } else {
-        enemies.push({
-          x: 900,
-          y: 300,
-          w: 60,
-          h: 120,
-          hp: 6,
-          speed: 1.4,
-          reward: 20,
-          img: teacherImg
-        });
+      const time = performance.now();
+      const delta = (time - prevTime) / 1000;
+      prevTime = time;
+
+      if (controls.isLocked) {
+        velocity.x -= velocity.x * 10.0 * delta;
+        velocity.z -= velocity.z * 10.0 * delta;
+
+        direction.z = Number(move.forward) - Number(move.backward);
+        direction.x = Number(move.right) - Number(move.left);
+        direction.normalize();
+
+        const speed = 40.0;
+
+        if (move.forward || move.backward) velocity.z -= direction.z * speed * delta;
+        if (move.left || move.right) velocity.x -= direction.x * speed * delta;
+
+        controls.moveRight(-velocity.x * delta);
+        controls.moveForward(-velocity.z * delta);
       }
+
+      // Update bullets
+      for (let i = bullets.length - 1; i >= 0; i--) {
+        const b = bullets[i];
+        b.mesh.position.addScaledVector(b.dir, b.speed * delta);
+        b.life -= delta * 1000;
+        if (b.life <= 0) {
+          scene.remove(b.mesh);
+          bullets.splice(i, 1);
+          continue;
+        }
+
+        // Check hit with enemies using raycast along bullet direction
+        raycaster.set(b.mesh.position, b.dir);
+        const intersects = raycaster.intersectObjects(enemies.map(e => e.mesh), false);
+        if (intersects.length > 0) {
+          const hit = intersects[0].object;
+          const enemy = enemies.find(e => e.mesh === hit);
+          if (enemy) {
+            enemy.hp -= gun.damage;
+            scene.remove(b.mesh);
+            bullets.splice(i, 1);
+
+            if (enemy.hp <= 0) {
+              scene.remove(enemy.mesh);
+              enemies.splice(enemies.indexOf(enemy), 1);
+              credits += enemy.reward;
+              updateUI();
+            }
+          }
+        }
+      }
+
+      renderer.render(scene, camera);
     }
 
-    // Update
-    function update(dt) {
-      lastSpawn += dt;
-      if (lastSpawn > 1200) {
-        lastSpawn = 0;
-        spawnEnemy();
-      }
-
-      bullets.forEach(b => b.x += b.vx);
-      bullets = bullets.filter(b => b.x < 950);
-
-      enemies.forEach(e => e.x -= e.speed);
-
-      // Bullet collisions
-      bullets.forEach(b => {
-        enemies.forEach(e => {
-          if (
-            b.x > e.x &&
-            b.x < e.x + e.w &&
-            b.y > e.y &&
-            b.y < e.y + e.h
-          ) {
-            e.hp -= b.damage;
-            b.x = 9999;
-          }
-        });
-      });
-
-      enemies = enemies.filter(e => {
-        if (e.hp <= 0) {
-          credits += e.reward;
-          updateUI();
-          return false;
-        }
-        return true;
-      });
-
-      enemies.forEach(e => {
-        if (e.x < player.x + player.w - 20) {
-          e.x = -9999;
-          health = Math.max(0, health - 1);
-          updateUI();
-        }
-      });
-
-      enemies = enemies.filter(e => e.x
+    animate();
+  </script>
+</body>
+</html>
