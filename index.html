@@ -9,6 +9,7 @@
     overflow: hidden;
     background: #202020;
   }
+
   #startOverlay {
     position: absolute;
     top: 0;
@@ -24,6 +25,10 @@
     font-size: 2em;
     cursor: pointer;
     z-index: 10;
+    user-select: none;           /* Prevent text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
   }
 </style>
 </head>
@@ -59,6 +64,8 @@ document.body.appendChild(renderer.domElement);
 // ----------------------
 const controls = new PointerLockControls(camera, document.body);
 const overlay = document.getElementById("startOverlay");
+
+// Click overlay to start
 overlay.addEventListener("click", () => {
   controls.lock();
 });
