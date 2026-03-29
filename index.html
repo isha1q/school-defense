@@ -1,20 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>School Defense Test</title>
+  <title>School Defense</title>
   <style>
     body {
       margin: 0;
       background: #222;
       color: #fff;
       font-family: sans-serif;
+      overflow: hidden;
     }
 
     #ui {
       position: absolute;
       top: 10px;
       left: 10px;
-      z-index: 2;
+      z-index: 5;
+      font-size: 14px;
+      line-height: 18px;
     }
 
     #shop {
@@ -24,41 +27,224 @@
       background: rgba(0,0,0,0.7);
       padding: 10px;
       border-radius: 8px;
-      z-index: 2;
+      z-index: 5;
+      font-size: 14px;
+    }
+
+    button {
+      width: 180px;
+      margin-top: 5px;
+      padding: 5px;
+      background: #444;
+      color: #fff;
+      border: 1px solid #777;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #222;
+      color: #777;
+      border-color: #555;
+      cursor: default;
     }
 
     canvas {
-      width: 900px !important;
-      height: 500px !important;
-      background: #000 !important;
-      border: 3px solid red !important;
       display: block;
-      margin: 80px auto 0 auto;
+      margin: 0 auto;
+      background: #000;
     }
   </style>
 </head>
 <body>
 
   <div id="ui">
-    <div>Credits: 0</div>
-    <div>Gun: Pencil Shooter</div>
-    <div>Damage: 1</div>
-    <div>Fire Rate: 400 ms</div>
-    <div>Health: 3</div>
+    <div>Credits: <span id="credits">0</span></div>
+    <div>Gun: <span id="gunName">Pencil Shooter</span></div>
+    <div>Damage: <span id="damage">1</span></div>
+    <div>Fire Rate: <span id="firerate">400 ms</span></div>
+    <div>Health: <span id="health">3</span></div>
   </div>
 
   <div id="shop">
     <strong>Shop</strong><br>
-    Nerf Blaster ($150)<br>
-    Rubber Band Launcher ($400)<br>
-    Paper Airplane Cannon ($900)
+    <button id="buyNerf">Nerf Blaster ($150)</button>
+    <button id="buyRubber">Rubber Band Launcher ($400)</button>
+    <button id="buyPaper">Paper Airplane Cannon ($900)</button>
   </div>
 
   <canvas id="game" width="900" height="500"></canvas>
 
   <script>
-alert("Script is running!");
-  </script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
 
-</body>
-</html>
+    // UI elements
+    const creditsEl = document.getElementById("credits");
+    const gunNameEl = document.getElementById("gunName");
+    const damageEl = document.getElementById("damage");
+    const firerateEl = document.getElementById("firerate");
+    const healthEl = document.getElementById("health");
+
+    const buyNerf = document.getElementById("buyNerf");
+    const buyRubber = document.getElementById("buyRubber");
+    const buyPaper = document.getElementById("buyPaper");
+
+    // Load graphics
+    const playerImg = new Image();
+    playerImg.src = "https://i.imgur.com/7V6xQ0C.png"; // blue student sprite
+
+    const studentImg = new Image();
+    studentImg.src = "https://i.imgur.com/8Yp7m0C.png"; // student enemy
+
+    const teacherImg = new Image();
+    teacherImg.src = "https://i.imgur.com/6lXz0Qn.png"; // teacher enemy
+
+    const bulletImg = new Image();
+    bulletImg.src = "https://i.imgur.com/5pQ2p7B.png"; // pencil bullet
+
+    // Game state
+    let credits = 0;
+    let health = 3;
+
+    let bullets = [];
+    let enemies = [];
+
+    let lastShot = 0;
+    let lastSpawn = 0;
+
+    let gun = {
+      name: "Pencil Shooter",
+      damage: 1,
+      rate: 400
+    };
+
+    function updateUI() {
+      creditsEl.textContent = credits;
+      gunNameEl.textContent = gun.name;
+      damageEl.textContent = gun.damage;
+      firerateEl.textContent = gun.rate + " ms";
+      healthEl.textContent = health;
+    }
+
+    const player = {
+      x: 80,
+      y: 300,
+      w: 60,
+      h: 120
+    };
+
+    // Shooting
+    canvas.addEventListener("mousedown", () => {
+      const now = performance.now();
+      if (now - lastShot < gun.rate) return;
+      lastShot = now;
+
+      bullets.push({
+        x: player.x + player.w,
+        y: player.y + player.h / 2,
+        vx: 8,
+        damage: gun.damage
+      });
+    });
+
+    // Shop
+    buyNerf.onclick = () => {
+      if (credits >= 150) {
+        credits -= 150;
+        gun = { name: "Nerf Blaster", damage: 2, rate: 280 };
+        updateUI();
+      }
+    };
+
+    buyRubber.onclick = () => {
+      if (credits >= 400) {
+        credits -= 400;
+        gun = { name: "Rubber Band Launcher", damage: 3, rate: 200 };
+        updateUI();
+      }
+    };
+
+    buyPaper.onclick = () => {
+      if (credits >= 900) {
+        credits -= 900;
+        gun = { name: "Paper Airplane Cannon", damage: 5, rate: 130 };
+        updateUI();
+      }
+    };
+
+    // Spawn enemies
+    function spawnEnemy() {
+      const type = Math.random() < 0.6 ? "student" : "teacher";
+
+      if (type === "student") {
+        enemies.push({
+          x: 900,
+          y: 300,
+          w: 60,
+          h: 120,
+          hp: 3,
+          speed: 1,
+          reward: 10,
+          img: studentImg
+        });
+      } else {
+        enemies.push({
+          x: 900,
+          y: 300,
+          w: 60,
+          h: 120,
+          hp: 6,
+          speed: 1.4,
+          reward: 20,
+          img: teacherImg
+        });
+      }
+    }
+
+    // Update
+    function update(dt) {
+      lastSpawn += dt;
+      if (lastSpawn > 1200) {
+        lastSpawn = 0;
+        spawnEnemy();
+      }
+
+      bullets.forEach(b => b.x += b.vx);
+      bullets = bullets.filter(b => b.x < 950);
+
+      enemies.forEach(e => e.x -= e.speed);
+
+      // Bullet collisions
+      bullets.forEach(b => {
+        enemies.forEach(e => {
+          if (
+            b.x > e.x &&
+            b.x < e.x + e.w &&
+            b.y > e.y &&
+            b.y < e.y + e.h
+          ) {
+            e.hp -= b.damage;
+            b.x = 9999;
+          }
+        });
+      });
+
+      enemies = enemies.filter(e => {
+        if (e.hp <= 0) {
+          credits += e.reward;
+          updateUI();
+          return false;
+        }
+        return true;
+      });
+
+      enemies.forEach(e => {
+        if (e.x < player.x + player.w - 20) {
+          e.x = -9999;
+          health = Math.max(0, health - 1);
+          updateUI();
+        }
+      });
+
+      enemies = enemies.filter(e => e.x
