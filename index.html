@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Canvas Test</title>
+  <title>School Defense Test</title>
   <style>
     body {
       margin: 0;
@@ -14,6 +14,16 @@
       position: absolute;
       top: 10px;
       left: 10px;
+      z-index: 2;
+    }
+
+    #shop {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 8px;
       z-index: 2;
     }
 
@@ -37,19 +47,22 @@
     <div>Health: 3</div>
   </div>
 
+  <div id="shop">
+    <strong>Shop</strong><br>
+    Nerf Blaster ($150)<br>
+    Rubber Band Launcher ($400)<br>
+    Paper Airplane Cannon ($900)
+  </div>
+
   <canvas id="game" width="900" height="500"></canvas>
 
   <script>
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
 
-    // Draw a blue square so we know the canvas works
-    function draw() {
-      ctx.fillStyle = "blue";
-      ctx.fillRect(100, 100, 100, 100);
-    }
-
-    draw();
+    // Draw a blue square so we know canvas works
+    ctx.fillStyle = "blue";
+    ctx.fillRect(100, 100, 100, 100);
   </script>
 
 </body>
