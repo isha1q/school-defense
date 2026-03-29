@@ -65,4 +65,39 @@ const light = new THREE.DirectionalLight(0xffffff, 1);
 light.position.set(5, 5, 5);
 scene.add(light);
 
-// ----------------
+// ----------------------
+// ANIMATION LOOP
+// ----------------------
+function animate() {
+  requestAnimationFrame(animate);
+
+  const speed = 10;
+  const friction = 8;
+  const dt = 0.016;
+
+  if (controls.isLocked) {
+    velocity.x -= velocity.x * friction * dt;
+    velocity.z -= velocity.z * friction * dt;
+
+    direction.z = Number(move.f) - Number(move.b);
+    direction.x = Number(move.r) - Number(move.l);
+    direction.normalize();
+
+    if (move.f || move.b) velocity.z -= direction.z * speed * dt;
+    if (move.l || move.r) velocity.x -= direction.x * speed * dt;
+
+    controls.moveRight(-velocity.x * dt);
+    controls.moveForward(-velocity.z * dt);
+  }
+
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
+
+  renderer.render(scene, camera);
+}
+
+animate();
+</script>
+
+</body>
+</html>
